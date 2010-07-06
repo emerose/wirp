@@ -17,10 +17,19 @@ module Proxtivaximum
       @options[:verbose] = false
       @options[:quiet]   = false
       @options[:network] = DEFAULT_CAPTIVE_NETWORK
+
+      # make sure we clean up after ourselves
+      at_exit do
+        clean_up
+      end
     end
 
     def run
       parse_options
+      start_internet_sharing
+      start_port_forwarding
+      wait_until_done
+      clean_up
     end
 
     protected
@@ -43,6 +52,41 @@ module Proxtivaximum
 
     def version
       "Proxtivaximum version #{VERSION} EXTREME!"
+    end
+
+    def start_internet_sharing
+      puts "Starting internet sharing..."
+      @internet_sharing_on = true
+    end
+
+    def stop_internet_sharing
+      puts "Stopping internet sharing..."
+      @internet_sharing_on = false
+    end
+
+    def start_port_forwarding
+      puts "Starting port forwarding..."
+      @port_forwarding_on = true
+    end
+
+    def stop_port_forwarding
+      puts "Stopping port forwarding..."
+      @port_forwarding_on = false
+    end
+
+    def wait_until_done
+      puts "Ok, all systems go.  Do your thing and hit return when finished."
+      gets
+    end
+
+    def clean_up
+      if @port_forwarding_on
+        stop_port_forwarding
+      end
+
+      if @internet_sharing_on
+        stop_internet_sharing
+      end
     end
   end
 end
