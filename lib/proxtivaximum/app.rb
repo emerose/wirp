@@ -4,8 +4,9 @@ require 'ipaddr'
 
 module Proxtivaximum
   class App
-    VERSION = '0.0.1'
-    DEFAULT_CAPTIVE_NETWORK="10.0.2.1/24"
+    VERSION                 = '0.0.1'
+    DEFAULT_CAPTIVE_NETWORK = "10.0.2.1/24"
+    BOOTP_PLIST             = "/etc/bootpd.plist"
 
     attr_reader :options
 
@@ -15,8 +16,10 @@ module Proxtivaximum
       # Set defaults
       @options = {}
       @options[:verbose] = false
-      @options[:quiet]   = false
       @options[:network] = DEFAULT_CAPTIVE_NETWORK
+
+      @internet_sharing_on = false
+      @port_forwarding_on  = false
 
       # make sure we clean up after ourselves
       at_exit do
@@ -36,26 +39,20 @@ module Proxtivaximum
 
     def parse_options
       opts = OptionParser.new 
-      opts.on('-v', '--version')    { output_version ; exit 0 }
-      opts.on('-h', '--help')       { output_help }
-      opts.on('-V', '--verbose')    { @options.verbose = true }  
+      opts.banner = "Proxtivaximum version #{VERSION} EXTREME!\nUsage: proxtivaximum [options]"
+      
+      opts.on('-h', '--help', "Print this help message") { puts opts ; exit 0 }
+      opts.on('-v', '--verbose', "Enable more verbose output") { @options.verbose = true }  
 
       opts.parse!(@arguments) rescue return false
     end
 
-    def output_help
-      puts version
-      puts <<-HELP
-      WOOO!  PROXYTASTIC!
-      HELP
-    end
-
-    def version
-      "Proxtivaximum version #{VERSION} EXTREME!"
-    end
-
     def start_internet_sharing
       puts "Starting internet sharing..."
+
+      if File.exist?(BOOTP_PLIST)
+        puts "Not overwriting existing #{BOOTP_PLIST}." if @options[:verbose]
+      end
       @internet_sharing_on = true
     end
 
