@@ -20,7 +20,7 @@ module Proxtivaximum
       @arguments = arguments
 
       # Set defaults
-      @verbose             = false
+      @verbose             = 0
       @router_ip           = DEFAULT_ROUTER_IP
       @netmask             = DEFAULT_NETMASK
       @preserve            = {}
@@ -47,10 +47,10 @@ module Proxtivaximum
       opts.banner = "Proxtivaximum version #{VERSION} EXTREME!\nUsage: proxtivaximum [options]"
 
       opts.on('-h', '--help', "Print this help message") { puts opts ; exit 0 }
-      opts.on('-v', '--verbose', "Enable more verbose output") { @verbose = true }  
+      opts.on('-v', '--verbose', "Enable more verbose output", "(May be used multiple times)") { @verbose+=1 }  
       opts.on('--ip IP', "IP to use for router", "(Default: #{@router_ip})") { |r| @router_ip = r }  
       opts.on('--netmask MASK', "Netmask to use for captive network", "(Default: #{@netmask})") { |m| @netmask = m }  
-      opts.on('--name NAME', "Name to use for wireless network)") { |n| @network_name = n }  
+      opts.on('--name NAME', "Name to use for wireless network") { |n| @network_name = n }  
 
       opts.parse!(@arguments) rescue return false
     end
@@ -62,12 +62,12 @@ module Proxtivaximum
         NATD_PLIST   => NATD_PLIST_TEMPLATE }.each_pair do |file, template|
 
         if File.exist?(file)
-          FileUtils.rm(file + ".proxybak", :verbose => @verbose, :force => true)
-          FileUtils.mv(file, file + ".proxybak", :verbose => @verbose)
+          FileUtils.rm(file + ".proxybak", :verbose => (@verbose>0), :force => true)
+          FileUtils.mv(file, file + ".proxybak", :verbose => (@verbose>0))
         end
 
         erb = ERB.new(File.read(template))
-        puts "----[ #{file} ]----\n#{erb.result binding}\n----" if verbose
+        puts "----[ #{file} ]----\n#{erb.result binding}\n----" if verbose > 1
         File.open(file, "w") do |f|
           f.write erb.result binding
         end
@@ -87,8 +87,8 @@ module Proxtivaximum
 
       Process.kill(15, @internet_sharing_pid)
       [BOOTPD_PLIST, NATD_PLIST].each do |file|
-        FileUtils.rm(file, :verbose => @verbose)
-        FileUtils.mv(file + ".proxybak", file, :verbose => @verbose) if File.exist?(file + ".proxybak")
+        FileUtils.rm(file, :verbose => (@verbose>0))
+        FileUtils.mv(file + ".proxybak", file, :verbose => (@verbose>0)) if File.exist?(file + ".proxybak")
       end
 
       @internet_sharing_on = false
