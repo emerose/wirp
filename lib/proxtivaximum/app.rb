@@ -8,12 +8,13 @@ module Proxtivaximum
     VERSION               = '0.0.1'
     DEFAULT_ROUTER_IP     = "10.123.123.1"
     DEFAULT_NETMASK       = "255.255.255.0"
+    DEFAULT_NAME          = "testing_network"
     BOOTPD_PLIST          = "/etc/bootpd.plist"
     BOOTPD_PLIST_TEMPLATE = File.join(File.dirname(__FILE__), 'resources', 'bootpd.plist.erb')
     NATD_PLIST            = "/Library/Preferences/SystemConfiguration/com.apple.nat.plist"
     NATD_PLIST_TEMPLATE   = File.join(File.dirname(__FILE__), 'resources', 'com.apple.nat.plist.erb')
 
-    attr_reader :verbose, :router_ip, :netmask, :internet_sharing_on, :port_forwarding_on
+    attr_reader :verbose, :router_ip, :netmask, :internet_sharing_on, :port_forwarding_on, :network_name
 
     def initialize(arguments)
       @arguments = arguments
@@ -25,7 +26,7 @@ module Proxtivaximum
       @preserve            = {}
       @internet_sharing_on = false
       @port_forwarding_on  = false
-
+      @network_name        = DEFAULT_NAME
 
       # make sure we clean up after ourselves
       at_exit do
@@ -49,6 +50,7 @@ module Proxtivaximum
       opts.on('-v', '--verbose', "Enable more verbose output") { @verbose = true }  
       opts.on('--ip IP', "IP to use for router", "(Default: #{@router_ip})") { |r| @router_ip = r }  
       opts.on('--netmask MASK', "Netmask to use for captive network", "(Default: #{@netmask})") { |m| @netmask = m }  
+      opts.on('--name NAME', "Name to use for wireless network)") { |n| @network_name = n }  
 
       opts.parse!(@arguments) rescue return false
     end
