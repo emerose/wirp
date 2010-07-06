@@ -1,25 +1,31 @@
 require 'optparse'
-require 'erb'
 require 'ipaddr'
+require 'erb'
+require 'fileutils'
 
 module Proxtivaximum
   class App
-    VERSION                 = '0.0.1'
-    DEFAULT_CAPTIVE_NETWORK = "10.0.2.1/24"
-    BOOTP_PLIST             = "/etc/bootpd.plist"
+    VERSION               = '0.0.1'
+    DEFAULT_ROUTER_IP     = "10.123.123.1"
+    DEFAULT_NETMASK       = "255.255.255.0"
+    BOOTPD_PLIST          = "/etc/bootpd.plist"
+    BOOTPD_PLIST_TEMPLATE = File.join(File.dirname(__FILE__), 'resources', 'bootpd.plist.erb')
+    NATD_PLIST            = "/Library/Preferences/SystemConfiguration/com.apple.nat.plist"
+    NATD_PLIST_TEMPLATE   = File.join(File.dirname(__FILE__), 'resources', 'com.apple.nat.plist.erb')
 
-    attr_reader :options
+    attr_reader :verbose, :router_ip, :netmask, :internet_sharing_on, :port_forwarding_on
 
     def initialize(arguments)
       @arguments = arguments
 
       # Set defaults
-      @options = {}
-      @options[:verbose] = false
-      @options[:network] = DEFAULT_CAPTIVE_NETWORK
-
+      @verbose             = false
+      @router_ip           = DEFAULT_ROUTER_IP
+      @netmask             = DEFAULT_NETMASK
+      @preserve            = {}
       @internet_sharing_on = false
       @port_forwarding_on  = false
+
 
       # make sure we clean up after ourselves
       at_exit do
@@ -35,14 +41,14 @@ module Proxtivaximum
       clean_up
     end
 
-    protected
-
     def parse_options
       opts = OptionParser.new 
       opts.banner = "Proxtivaximum version #{VERSION} EXTREME!\nUsage: proxtivaximum [options]"
-      
+
       opts.on('-h', '--help', "Print this help message") { puts opts ; exit 0 }
-      opts.on('-v', '--verbose', "Enable more verbose output") { @options.verbose = true }  
+      opts.on('-v', '--verbose', "Enable more verbose output") { @verbose = true }  
+      opts.on('--ip IP', "IP to use for router", "(Default: #{@router_ip})") { |r| @router_ip = r }  
+      opts.on('--netmask MASK', "Netmask to use for captive network", "(Default: #{@netmask})") { |m| @netmask = m }  
 
       opts.parse!(@arguments) rescue return false
     end
@@ -50,14 +56,39 @@ module Proxtivaximum
     def start_internet_sharing
       puts "Starting internet sharing..."
 
-      if File.exist?(BOOTP_PLIST)
-        puts "Not overwriting existing #{BOOTP_PLIST}." if @options[:verbose]
+      { BOOTPD_PLIST => BOOTPD_PLIST_TEMPLATE, 
+        NATD_PLIST   => NATD_PLIST_TEMPLATE }.each_pair do |file, template|
+
+        if File.exist?(file)
+          FileUtils.rm(file + ".proxybak", :verbose => @verbose, :force => true)
+          FileUtils.mv(file, file + ".proxybak", :verbose => @verbose)
+        end
+
+        erb = ERB.new(File.read(template))
+        puts "----[ #{file} ]----\n#{erb.result binding}\n----" if verbose
+        File.open(file, "w") do |f|
+          f.write erb.result binding
+        end
       end
+
+      @internet_sharing_pid = fork
+      if @internet_sharing_pid.nil?
+        # in child
+        exec "/usr/libexec/InternetSharing"
+      end
+
       @internet_sharing_on = true
     end
 
     def stop_internet_sharing
       puts "Stopping internet sharing..."
+
+      Process.kill(9, @internet_sharing_pid)
+      [BOOTPD_PLIST, NATD_PLIST].each do |file|
+        FileUtils.rm(file, :verbose => @verbose)
+        FileUtils.mv(file + ".proxybak", file, :verbose => @verbose) if File.exist?(file + ".proxybak")
+      end
+
       @internet_sharing_on = false
     end
 
@@ -84,6 +115,25 @@ module Proxtivaximum
       if @internet_sharing_on
         stop_internet_sharing
       end
+    end
+
+    def network_address
+      IPAddr.new(router_ip).mask(netmask).to_range.first.to_s
+    end
+
+    def broadcast_address
+      IPAddr.new(router_ip).mask(netmask).to_range.first.to_s
+    end
+
+    def first_usable_ip
+      IPAddr.new(router_ip).succ.to_s
+    end
+
+    def last_usable_ip
+      # IPAddr is teh suck.
+      ip = IPAddr.new(router_ip)
+      num = ip.mask(netmask).to_range.last.to_i
+      return IPAddr.new(num - 1, ip.family).to_s
     end
   end
 end
