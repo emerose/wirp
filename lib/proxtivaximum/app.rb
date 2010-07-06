@@ -83,7 +83,7 @@ module Proxtivaximum
     def stop_internet_sharing
       puts "Stopping internet sharing..."
 
-      Process.kill(9, @internet_sharing_pid)
+      Process.kill(15, @internet_sharing_pid)
       [BOOTPD_PLIST, NATD_PLIST].each do |file|
         FileUtils.rm(file, :verbose => @verbose)
         FileUtils.mv(file + ".proxybak", file, :verbose => @verbose) if File.exist?(file + ".proxybak")
