@@ -1,12 +1,12 @@
 #!/usr/bin/env ruby
 #
-# PROXTIVAXIMUM!  EXTREME PROXICATION!
+# Wirp!
 #
 # warning: extreme proxying ahead.
 
 $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '..', 'lib')
-require 'proxtivaximum/app'
+require 'wirp/app'
 
-app = Proxtivaximum::App.new(ARGV)
+app = Wirp::App.new(ARGV)
 app.run
 

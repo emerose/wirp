@@ -3,7 +3,7 @@ require 'ipaddr'
 require 'erb'
 require 'fileutils'
 
-module Proxtivaximum
+module Wirp
   class App
     VERSION               = '0.0.1'
     DEFAULT_ROUTER_IP     = "10.123.123.1"
@@ -46,7 +46,7 @@ module Proxtivaximum
 
     def parse_options
       opts = OptionParser.new 
-      opts.banner = "Proxtivaximum version #{VERSION} EXTREME!\nUsage: proxtivaximum [options]"
+      opts.banner = "Wirp version #{VERSION} EXTREME!\nUsage: wirp [options]"
 
       opts.on('-h', '--help', "Print this help message") { puts opts ; exit 0 }
       opts.on('-v', '--verbose', "Enable more verbose output", "(May be used multiple times)") { @verbose+=1 }  
@@ -127,24 +127,4 @@ module Proxtivaximum
         stop_internet_sharing
       end
     end
-
-    def network_address
-      IPAddr.new(router_ip).mask(netmask).to_range.first.to_s
-    end
-
-    def broadcast_address
-      IPAddr.new(router_ip).mask(netmask).to_range.first.to_s
-    end
-
-    def first_usable_ip
-      IPAddr.new(router_ip).succ.to_s
-    end
-
-    def last_usable_ip
-      # IPAddr is teh suck.
-      ip = IPAddr.new(router_ip)
-      num = ip.mask(netmask).to_range.last.to_i
-      return IPAddr.new(num - 1, ip.family).to_s
-    end
-  end
 end

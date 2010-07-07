@@ -1,4 +1,4 @@
-= proxtivaximum
+= wirp
 
 Description goes here.
 

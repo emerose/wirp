@@ -4,11 +4,11 @@ require 'rake'
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
-    gem.name = "proxtivaximum"
+    gem.name = "wirp"
     gem.summary = %Q{Create captive networks with transparent proxying on OS X}
     gem.description = %Q{TODO: longer description of your gem}
     gem.email = "quigley@emerose.com"
-    gem.homepage = "http://github.com/emerose/proxtivaximum"
+    gem.homepage = "http://github.com/emerose/wirp"
     gem.authors = ["Sam Quigley"]
     gem.add_development_dependency "thoughtbot-shoulda", ">= 0"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
@@ -47,7 +47,7 @@ Rake::RDocTask.new do |rdoc|
   version = File.exist?('VERSION') ? File.read('VERSION') : ""
 
   rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "proxtivaximum #{version}"
+  rdoc.title = "wirp #{version}"
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
