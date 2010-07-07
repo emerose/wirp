@@ -25,7 +25,7 @@ module Wirp
 
     def last_usable_ip
       # IPAddr is teh suck.
-      ip = IPAddr.new(router_ip)
+      ip = IPAddr.new(router_addr)
       num = ip.mask(netmask).to_range.last.to_i
       return IPAddr.new(num - 1, ip.family).to_s
     end
