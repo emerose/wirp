@@ -24,5 +24,11 @@ describe Wirp::NetworkConfiguration do
     @nc.netmask     = "255.255.255.0"
     @nc.broadcast_address.should == "1.2.3.255"
   end
+
+  it "should choose the first usable IP correctly" do
+    @nc.router_addr = "1.2.3.4"
+    @nc.netmask     = "255.255.255.0"
+    @nc.first_usable_ip.should == "1.2.3.5"
+  end
 end
 
