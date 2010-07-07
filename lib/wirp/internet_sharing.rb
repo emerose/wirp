@@ -30,7 +30,7 @@ module Wirp
 
         erb = ERB.new(File.read(template))
         File.open(file, "w") do |f|
-          f.write erb.result binding
+          f.write erb.result netcfg.get_binding
         end
       end
 

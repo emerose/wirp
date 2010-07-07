@@ -29,5 +29,9 @@ module Wirp
       num = ip.mask(netmask).to_range.last.to_i
       return IPAddr.new(num - 1, ip.family).to_s
     end
+
+    def get_binding
+      binding
+    end
   end
 end
