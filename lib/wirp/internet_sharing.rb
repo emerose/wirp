@@ -46,6 +46,8 @@ module Wirp
     def stop
       @stdout.puts "Stopping internet sharing..."
 
+      raise "No child!?" unless @internet_sharing_pid
+
       Process.kill(15, @internet_sharing_pid)
       [BOOTPD_PLIST, NATD_PLIST].each do |file|
         FileUtils.rm(file)

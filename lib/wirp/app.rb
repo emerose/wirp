@@ -1,27 +1,24 @@
 require 'optparse'
 require 'wirp/network_configuration'
 require 'wirp/internet_sharing'
+require 'wirp/port_forwarding'
 
 module Wirp
   class App
-    VERSION               = '0.0.1'
-    SYSCTL                = "/usr/sbin/sysctl"
-    IPFW                  = "/sbin/ipfw"
+    VERSION = '0.0.1'
 
-    attr_reader :verbose, :router_ip, :netmask, :internet_sharing, :port_forwarding_on, :network_name
-    attr_reader :network_config
+    attr_reader :verbose, :internet_sharing, :port_forwarding, :network_config
 
     def initialize(arguments, stdout)
-      @arguments = arguments
-      @stdout    = stdout
+      @arguments        = arguments
+      @stdout           = stdout
 
       @network_config   = NetworkConfiguration.new
       @internet_sharing = InternetSharing.new(@stdout)
+      @port_forwarding  = PortForwarding.new(@stdout)
 
       # Set defaults
-      @verbose             = 0
-      @preserve            = {}
-      @port_forwarding_on  = false
+      @verbose          = 0
 
       # make sure we clean up after ourselves
       at_exit do
@@ -32,7 +29,7 @@ module Wirp
     def run
       parse_options
       @internet_sharing.start(@network_config)
-      start_port_forwarding
+      @port_forwarding.start
       wait_until_done
       clean_up
     end
@@ -50,31 +47,14 @@ module Wirp
       opts.parse!(@arguments) rescue return false
     end
 
-    def start_port_forwarding
-      @stdout.puts "Starting port forwarding..."
-
-      system(SYSCTL, "-w", "net.inet.ip.scopedroute=0") 
-      system(IPFW, "add", "5", "fwd", "127.0.0.1,8080", "tcp", "from", "not", "me", "to", "any", "80")
-      system(IPFW, "add", "5", "fwd", "127.0.0.1,8443", "tcp", "from", "not", "me", "to", "any", "443")
-      @port_forwarding_on = true
-    end
-
-    def stop_port_forwarding
-      @stdout.puts "Stopping port forwarding..."
-
-      system(SYSCTL, "-w", "net.inet.ip.scopedroute=1") 
-      system(IPFW, "delete", "5")
-      @port_forwarding_on = false
-    end
-
     def wait_until_done
       @stdout.puts "Ok, all systems go.  Do your thing and hit return when finished."
       gets
     end
 
     def clean_up
-      if @port_forwarding_on
-        stop_port_forwarding
+      if @port_forwarding.enabled?
+        @port_forwarding.stop
       end
 
       if @internet_sharing.enabled?
