@@ -13,6 +13,8 @@ module Proxtivaximum
     BOOTPD_PLIST_TEMPLATE = File.join(File.dirname(__FILE__), 'resources', 'bootpd.plist.erb')
     NATD_PLIST            = "/Library/Preferences/SystemConfiguration/com.apple.nat.plist"
     NATD_PLIST_TEMPLATE   = File.join(File.dirname(__FILE__), 'resources', 'com.apple.nat.plist.erb')
+    SYSCTL                = "/usr/sbin/sysctl"
+    IPFW                  = "/sbin/ipfw"
 
     attr_reader :verbose, :router_ip, :netmask, :internet_sharing_on, :port_forwarding_on, :network_name
 
@@ -96,11 +98,18 @@ module Proxtivaximum
 
     def start_port_forwarding
       puts "Starting port forwarding..."
+
+      system(SYSCTL, "-w", "net.inet.ip.scopedroute=0") 
+      system(IPFW, "add", "5", "fwd", "127.0.0.1,8080", "tcp", "from", "not", "me", "to", "any", "80")
+      system(IPFW, "add", "5", "fwd", "127.0.0.1,8443", "tcp", "from", "not", "me", "to", "any", "443")
       @port_forwarding_on = true
     end
 
     def stop_port_forwarding
       puts "Stopping port forwarding..."
+
+      system(SYSCTL, "-w", "net.inet.ip.scopedroute=1") 
+      system(IPFW, "delete", "5")
       @port_forwarding_on = false
     end
 
