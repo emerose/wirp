@@ -3,8 +3,8 @@ require 'fileutils'
 
 module Wirp
   class PortForwarding
-    SYSCTL                = "/usr/sbin/sysctl"
-    IPFW                  = "/sbin/ipfw"
+    SYSCTL = "/usr/sbin/sysctl"
+    IPFW   = "/sbin/ipfw"
 
 		def initialize(stdout)
 			@stdout = stdout
