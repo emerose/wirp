@@ -1,13 +1,11 @@
 require 'optparse'
 require 'erb'
 require 'fileutils'
+require 'wirp/network_configuration'
 
 module Wirp
   class App
     VERSION               = '0.0.1'
-    DEFAULT_ROUTER_IP     = "10.123.123.1"
-    DEFAULT_NETMASK       = "255.255.255.0"
-    DEFAULT_NAME          = "testing_network"
     BOOTPD_PLIST          = "/etc/bootpd.plist"
     BOOTPD_PLIST_TEMPLATE = File.join(File.dirname(__FILE__), 'resources', 'bootpd.plist.erb')
     NATD_PLIST            = "/Library/Preferences/SystemConfiguration/com.apple.nat.plist"
@@ -17,17 +15,17 @@ module Wirp
 
     attr_reader :verbose, :router_ip, :netmask, :internet_sharing_on, :port_forwarding_on, :network_name
 
-    def initialize(arguments)
+    def initialize(arguments, stdout)
       @arguments = arguments
+      @stdout    = stdout
+
+      @network_config = NetworkConfiguration.new
 
       # Set defaults
       @verbose             = 0
-      @router_ip           = DEFAULT_ROUTER_IP
-      @netmask             = DEFAULT_NETMASK
       @preserve            = {}
       @internet_sharing_on = false
       @port_forwarding_on  = false
-      @network_name        = DEFAULT_NAME
 
       # make sure we clean up after ourselves
       at_exit do
@@ -47,9 +45,9 @@ module Wirp
       opts = OptionParser.new 
       opts.banner = "Wirp version #{VERSION} EXTREME!\nUsage: wirp [options]"
 
-      opts.on('-h', '--help', "Print this help message") { puts opts ; exit 0 }
+      opts.on('-h', '--help', "Print this help message") { @stdout.puts opts ; exit 0 }
       opts.on('-v', '--verbose', "Enable more verbose output", "(May be used multiple times)") { @verbose+=1 }  
-      opts.on('--ip IP', "IP to use for router", "(Default: #{@router_ip})") { |r| @router_ip = r }  
+      opts.on('--ip IP', "IP to use for router (Default: #{@network_config.router_addr})") { |ip| @network_config.router_addr = ip }  
       opts.on('--netmask MASK', "Netmask to use for captive network", "(Default: #{@netmask})") { |m| @netmask = m }  
       opts.on('--name NAME', "Name to use for wireless network") { |n| @network_name = n }  
 
@@ -57,7 +55,7 @@ module Wirp
     end
 
     def start_internet_sharing
-      puts "Starting internet sharing..."
+      @stdout.puts "Starting internet sharing..."
 
       { BOOTPD_PLIST => BOOTPD_PLIST_TEMPLATE, 
         NATD_PLIST   => NATD_PLIST_TEMPLATE }.each_pair do |file, template|
@@ -68,7 +66,7 @@ module Wirp
         end
 
         erb = ERB.new(File.read(template))
-        puts "----[ #{file} ]----\n#{erb.result binding}\n----" if verbose > 1
+        @stdout.puts "----[ #{file} ]----\n#{erb.result binding}\n----" if verbose > 1
         File.open(file, "w") do |f|
           f.write erb.result binding
         end
@@ -84,7 +82,7 @@ module Wirp
     end
 
     def stop_internet_sharing
-      puts "Stopping internet sharing..."
+      @stdout.puts "Stopping internet sharing..."
 
       Process.kill(15, @internet_sharing_pid)
       [BOOTPD_PLIST, NATD_PLIST].each do |file|
@@ -96,7 +94,7 @@ module Wirp
     end
 
     def start_port_forwarding
-      puts "Starting port forwarding..."
+      @stdout.puts "Starting port forwarding..."
 
       system(SYSCTL, "-w", "net.inet.ip.scopedroute=0") 
       system(IPFW, "add", "5", "fwd", "127.0.0.1,8080", "tcp", "from", "not", "me", "to", "any", "80")
@@ -105,7 +103,7 @@ module Wirp
     end
 
     def stop_port_forwarding
-      puts "Stopping port forwarding..."
+      @stdout.puts "Stopping port forwarding..."
 
       system(SYSCTL, "-w", "net.inet.ip.scopedroute=1") 
       system(IPFW, "delete", "5")
@@ -113,7 +111,7 @@ module Wirp
     end
 
     def wait_until_done
-      puts "Ok, all systems go.  Do your thing and hit return when finished."
+      @stdout.puts "Ok, all systems go.  Do your thing and hit return when finished."
       gets
     end
 
@@ -126,4 +124,5 @@ module Wirp
         stop_internet_sharing
       end
     end
+  end
 end
