@@ -1,3 +1,5 @@
+require 'ipaddr'
+
 module Wirp
   class NetworkConfiguration
     def initialize

@@ -12,5 +12,11 @@ describe Wirp::NetworkConfiguration do
       @nc.should respond_to(method)
     end
   end
+
+  it "should calculate network addresses correctly" do
+    @nc.router_addr = "1.2.3.4"
+    @nc.netmask     = "255.255.255.0"
+    @nc.network_address.should == "1.2.3.0"
+  end
 end
 

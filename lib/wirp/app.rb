@@ -1,5 +1,4 @@
 require 'optparse'
-require 'ipaddr'
 require 'erb'
 require 'fileutils'
 
