@@ -64,8 +64,8 @@ module Wirp
         NATD_PLIST   => NATD_PLIST_TEMPLATE }.each_pair do |file, template|
 
         if File.exist?(file)
-          FileUtils.rm(file + ".proxybak", :verbose => (@verbose>0), :force => true)
-          FileUtils.mv(file, file + ".proxybak", :verbose => (@verbose>0))
+          FileUtils.rm(file + ".wirp-bak", :verbose => (@verbose>0), :force => true)
+          FileUtils.mv(file, file + ".wirp-bak", :verbose => (@verbose>0))
         end
 
         erb = ERB.new(File.read(template))
@@ -90,7 +90,7 @@ module Wirp
       Process.kill(15, @internet_sharing_pid)
       [BOOTPD_PLIST, NATD_PLIST].each do |file|
         FileUtils.rm(file, :verbose => (@verbose>0))
-        FileUtils.mv(file + ".proxybak", file, :verbose => (@verbose>0)) if File.exist?(file + ".proxybak")
+        FileUtils.mv(file + ".wirp-bak", file, :verbose => (@verbose>0)) if File.exist?(file + ".wirp-bak")
       end
 
       @internet_sharing_on = false

@@ -1,4 +1,4 @@
-module Proxpot
+module Wirp
   class NetworkConfiguration
     def initialize
       @router_addr  = "10.123.123.1"
