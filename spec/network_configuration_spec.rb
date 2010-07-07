@@ -18,5 +18,11 @@ describe Wirp::NetworkConfiguration do
     @nc.netmask     = "255.255.255.0"
     @nc.network_address.should == "1.2.3.0"
   end
+
+  it "should calculate broadcast addresses correctly" do
+    @nc.router_addr = "1.2.3.4"
+    @nc.netmask     = "255.255.255.0"
+    @nc.broadcast_address.should == "1.2.3.255"
+  end
 end
 
