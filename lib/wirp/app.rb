@@ -1,31 +1,26 @@
 require 'optparse'
-require 'erb'
-require 'fileutils'
 require 'wirp/network_configuration'
+require 'wirp/internet_sharing'
 
 module Wirp
   class App
     VERSION               = '0.0.1'
-    BOOTPD_PLIST          = "/etc/bootpd.plist"
-    BOOTPD_PLIST_TEMPLATE = File.join(File.dirname(__FILE__), 'resources', 'bootpd.plist.erb')
-    NATD_PLIST            = "/Library/Preferences/SystemConfiguration/com.apple.nat.plist"
-    NATD_PLIST_TEMPLATE   = File.join(File.dirname(__FILE__), 'resources', 'com.apple.nat.plist.erb')
     SYSCTL                = "/usr/sbin/sysctl"
     IPFW                  = "/sbin/ipfw"
 
-    attr_reader :verbose, :router_ip, :netmask, :internet_sharing_on, :port_forwarding_on, :network_name
+    attr_reader :verbose, :router_ip, :netmask, :internet_sharing, :port_forwarding_on, :network_name
     attr_reader :network_config
 
     def initialize(arguments, stdout)
       @arguments = arguments
       @stdout    = stdout
 
-      @network_config = NetworkConfiguration.new
+      @network_config   = NetworkConfiguration.new
+      @internet_sharing = InternetSharing.new(@stdout)
 
       # Set defaults
       @verbose             = 0
       @preserve            = {}
-      @internet_sharing_on = false
       @port_forwarding_on  = false
 
       # make sure we clean up after ourselves
@@ -36,7 +31,7 @@ module Wirp
 
     def run
       parse_options
-      start_internet_sharing
+      @internet_sharing.start(@network_config)
       start_port_forwarding
       wait_until_done
       clean_up
@@ -53,45 +48,6 @@ module Wirp
       opts.on('--name NAME', "Name to use for wireless network (Default: #{@network_config.network_name})") { |n| @network_config.network_name = n }  
 
       opts.parse!(@arguments) rescue return false
-    end
-
-    def start_internet_sharing
-      @stdout.puts "Starting internet sharing..."
-
-      { BOOTPD_PLIST => BOOTPD_PLIST_TEMPLATE, 
-        NATD_PLIST   => NATD_PLIST_TEMPLATE }.each_pair do |file, template|
-
-        if File.exist?(file)
-          FileUtils.rm(file + ".wirp-bak", :verbose => (@verbose>0), :force => true)
-          FileUtils.mv(file, file + ".wirp-bak", :verbose => (@verbose>0))
-        end
-
-        erb = ERB.new(File.read(template))
-        @stdout.puts "----[ #{file} ]----\n#{erb.result binding}\n----" if verbose > 1
-        File.open(file, "w") do |f|
-          f.write erb.result binding
-        end
-      end
-
-      @internet_sharing_pid = fork
-      if @internet_sharing_pid.nil?
-        # in child
-        exec "/usr/libexec/InternetSharing"
-      end
-
-      @internet_sharing_on = true
-    end
-
-    def stop_internet_sharing
-      @stdout.puts "Stopping internet sharing..."
-
-      Process.kill(15, @internet_sharing_pid)
-      [BOOTPD_PLIST, NATD_PLIST].each do |file|
-        FileUtils.rm(file, :verbose => (@verbose>0))
-        FileUtils.mv(file + ".wirp-bak", file, :verbose => (@verbose>0)) if File.exist?(file + ".wirp-bak")
-      end
-
-      @internet_sharing_on = false
     end
 
     def start_port_forwarding
@@ -121,8 +77,8 @@ module Wirp
         stop_port_forwarding
       end
 
-      if @internet_sharing_on
-        stop_internet_sharing
+      if @internet_sharing.enabled?
+        @internet_sharing.stop
       end
     end
   end
