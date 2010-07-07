@@ -14,6 +14,7 @@ module Wirp
     IPFW                  = "/sbin/ipfw"
 
     attr_reader :verbose, :router_ip, :netmask, :internet_sharing_on, :port_forwarding_on, :network_name
+    attr_reader :network_config
 
     def initialize(arguments, stdout)
       @arguments = arguments
@@ -46,10 +47,10 @@ module Wirp
       opts.banner = "Wirp version #{VERSION} EXTREME!\nUsage: wirp [options]"
 
       opts.on('-h', '--help', "Print this help message") { @stdout.puts opts ; exit 0 }
-      opts.on('-v', '--verbose', "Enable more verbose output", "(May be used multiple times)") { @verbose+=1 }  
+      opts.on('-v', '--verbose', "Enable more verbose output (May be used multiple times)") { @verbose+=1 }  
       opts.on('--ip IP', "IP to use for router (Default: #{@network_config.router_addr})") { |ip| @network_config.router_addr = ip }  
-      opts.on('--netmask MASK', "Netmask to use for captive network", "(Default: #{@netmask})") { |m| @netmask = m }  
-      opts.on('--name NAME', "Name to use for wireless network") { |n| @network_name = n }  
+      opts.on('--netmask MASK', "Netmask to use for captive network (Default: #{@network_config.netmask})") { |m| @network_config.netmask = m }  
+      opts.on('--name NAME', "Name to use for wireless network (Default: #{@network_config.network_name})") { |n| @network_config.network_name = n }  
 
       opts.parse!(@arguments) rescue return false
     end
